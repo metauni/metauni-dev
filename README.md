@@ -2,7 +2,7 @@
 
 This repository hosts demonstration Roblox levels and common code snippets used within these nodes, as well as (eventually) open source tools.
 
-## metauni-node-template
+## metauni-node-template.rbxl
 
 - Workspace -> **Spawn Location**: where players spawn into your place (move this down into the ground to make it invisible)
 - Workspace -> **Zones**: translucent zones which will correspond to voice channels within your discord channel
@@ -13,9 +13,9 @@ This repository hosts demonstration Roblox levels and common code snippets used 
   - If you'd like your node to be accessible from the metauni hub, send your place ID to <admin@metauni.org>. 
 - ServerScriptService -> **ZonesScript**: adds triggers to each zone in the `Zones` folder, which tell the discord bot which voice channel to move each player into, according to the current zone they are touching
 
-## TRS
+## TRS.rbxl
 
-A reasonably up-to-date copy of the Rising Sea Roblox file, demonstrating many of the features you may wish to copy in your node (please go ahead!). The `ZonesScript` file is the only omission, since this is covered by `metauni-node-template`. Most of the objects in the world are locked, I left unlocked the things you are most likely to be interested in at the beginning (e.g. slides).
+A reasonably up-to-date copy of the Rising Sea Roblox file, demonstrating many of the features you may wish to copy in your node (please go ahead!). The `ZonesScript` file is the only omission, since this is covered by `metauni-node-template`. Most of the objects in the world are locked, I left unlocked the things you are most likely to be interested in at the beginning (e.g. slides). To copy objects you will often need to copy the underlying Part and also the code in `StarterGUI`, see [this video](https://youtu.be/rHaRz8J79S4).
 
 ## Building tips
 
