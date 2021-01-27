@@ -2,6 +2,15 @@
 
 This repository hosts demonstration Roblox levels and common code snippets used within these nodes, as well as (eventually) open source tools.
 
+## Discord bot
+
+Here are the commands the Discord bot understands (incomplete). You can issue these commands in any channel:
+
+* `!setup` can only be issued by the server owner. Sets the log channel to the current channel.
+* `!register <roblox-username>` registers the given Roblox username to the author of the command.
+* `!unregister` unregisters the Roblox username associated to the author, if any.
+* `!gather <zone_name>` move all users into the given voice channel.
+
 ## metauni-node-template.rbxl
 
 - Workspace -> **Spawn Location**: where players spawn into your place (move this down into the ground to make it invisible)
