@@ -23,4 +23,10 @@ Be careful with the select tool, it does not have a distance filter! So if you d
 
 ## Limitations
 
-The current Discord bot uses the [repl.it database](https://docs.repl.it/misc/database) which has a limit of 5000 keys. Since old registrations are not automatically removed, you should probably periodically check whether you are close to hitting this limit (if new users fail to register, you've probably hit it). In this case you will have to transition to a MongoDB database or host your own.
+Here are the things that might break on you:
+
+* The current Discord bot uses the [repl.it database](https://docs.repl.it/misc/database) which has a limit of 5000 keys. Since old registrations are not automatically removed, you should probably periodically check whether you are close to hitting this limit (if new users fail to register, you've probably hit it). In this case you will have to transition to a MongoDB database or host your own.
+
+* There are rate limits on the Discord bot. In principle you could use one Discord server for many Roblox worlds, but if you have many users and many zones, it is possible that the Discord bot will exceed these rate limits (it seems unlikely to me but I haven't checked the numbers).
+
+* Currently Roblox servers are capped at 100 users (at least the ones I can make). If you exceed this, it will spawn new users into a copy of the server. For example if you plan to host a talk, you can have >100 users on Discord listening but only 100 of them will be in the same copy of the server as the speaker.
