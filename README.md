@@ -4,7 +4,7 @@ This repository hosts demonstration Roblox levels and common code snippets used 
 
 ## Discord bot
 
-Here are the commands the Discord bot understands (incomplete). You can issue these commands in any channel:
+Here are the commands the Discord bot understands. You can issue these commands in any channel:
 
 * `!setup` can only be issued by the server owner. Sets the log channel to the current channel.
 * `!register <roblox-username>` registers the given Roblox username to the author of the command.
