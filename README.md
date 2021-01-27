@@ -20,3 +20,7 @@ A reasonably up-to-date copy of the Rising Sea Roblox file, demonstrating many o
 ## Building tips
 
 Be careful with the select tool, it does not have a distance filter! So if you drag to select a bunch of objects, be vigilant that you haven't selected parts halfway across the world (often this will manifest as trees or other objects being moved, or unanchored, so they fall over). To avoid problems like this you should get into the habit of using the Lock tool on parts of the world you aren't currently editing.
+
+## Limitations
+
+The current Discord bot uses the [repl.it database](https://docs.repl.it/misc/database) which has a limit of 5000 keys. Since old registrations are not automatically removed, you should probably periodically check whether you are close to hitting this limit (if new users fail to register, you've probably hit it). In this case you will have to transition to a MongoDB database or host your own.
