@@ -1,0 +1,4 @@
+To add a chat command, like `\ban username`
+- Add `ChatModules` folder inside `Chat`, and a `ModuleScript` inside that. This matches the default structure that gets added to `Chat` when the server starts. The default stuff outside `ChatModules` will get added, however we have overwritten the entire `ChatModules` folder.
+- Add a `BoolValue` inside the `ChatModules` folder, call it `InsertDefaultModules`, and tick it's `Value` property to enable it. This tells roblox to add back all the default modules to this folder when the server starts.
+- Follow the examples here. https://developer.roblox.com/en-us/articles/Lua-Chat-System 
