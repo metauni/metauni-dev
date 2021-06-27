@@ -110,6 +110,10 @@ local function drawWorldLine(name, curveIndex, prevMousePos, mousePos, thickness
 	worldLine.CastShadow = false
 	worldLine.Parent = worldFolder
 	-- end DM
+	
+	--Billy
+	worldLine:SetAttribute("RelStart", prevMousePos)
+	worldLine:SetAttribute("RelStop", mousePos)
 end
 
 local drawEvent = createEvent(whiteboard.Name .. "DrawEvent")
@@ -146,6 +150,33 @@ clearEvent.OnServerEvent:Connect(function(client)
 	whiteboard.WorldLines:ClearAllChildren() -- DM 21/3/21
 	
 	addToReplayHistory("clear", nil)
+end)
+
+--Billy
+
+local function eraseWorldLine(start, stop)
+
+	for _, stroke in ipairs(whiteboard.WorldLines:GetChildren()) do
+		for _, line in ipairs(stroke:GetChildren()) do
+
+			local relStart = line:GetAttribute("RelStart")
+			local relStop = line:GetAttribute("RelStop")
+
+			if relStart == start and relStop == stop then
+				line.Parent = nil
+
+				return
+			end
+
+		end
+	end	
+end
+
+local eraseEvent = createEvent(whiteboard.Name .. "EraseEvent")
+eraseEvent.OnServerEvent:Connect(function(client, name, start, stop)
+	eraseEvent:FireAllClients(name, start, stop)
+	addToReplayHistory("erase", {name, start, stop})
+	eraseWorldLine(start, stop)
 end)
 
 --local historyEvent = createEvent(whiteboard.Name .. "HistoryEvent")
@@ -274,6 +305,10 @@ runService.Heartbeat:Connect(function(dt)
 				local data = event.data
 				clearEvent:FireAllClients()
 				whiteboard.WorldLines:ClearAllChildren() -- DM 21/3/21
+			elseif event.eventType == "erase" then
+				local data = event.data
+				eraseEvent:FireAllClients(data[1], data[2], data[3])
+				eraseWorldLine(data[2], data[3])
 			end
 			replayPlaybackIndex = replayPlaybackIndex+1
 		else 

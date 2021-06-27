@@ -11,6 +11,8 @@ local whiteboardDrawEvent = game.ReplicatedStorage:FindFirstChild(whiteboard.Nam
 local whiteboardCursorEvent = game.ReplicatedStorage:FindFirstChild(whiteboard.Name .. "CursorEvent")
 local whiteboardClearEvent = game.ReplicatedStorage:FindFirstChild(whiteboard.Name .. "ClearEvent")
 local whiteboardUndoEvent = game.ReplicatedStorage:FindFirstChild(whiteboard.Name .. "UndoEvent")
+--Billy
+local whiteboardEraseEvent = game.ReplicatedStorage:FindFirstChild(whiteboard.Name.."EraseEvent")
 
 local whiteboardReplayRecordingStartEvent = game.ReplicatedStorage:FindFirstChild(whiteboard.Name .. "ReplayRecordingStartEvent")
 local whiteboardReplayRecordingStopEvent = game.ReplicatedStorage:FindFirstChild(whiteboard.Name .. "ReplayRecordingStopEvent")
@@ -28,6 +30,9 @@ local whiteboardDeactivateEvent = game.ReplicatedStorage:FindFirstChild("Whitebo
 local boardActive = true
 whiteboardActivateEvent.OnClientEvent:Connect(function() boardActive = true end)
 whiteboardDeactivateEvent.OnClientEvent:Connect(function() boardActive = false end)
+
+-- Billy
+local UserInputService = game:GetService("UserInputService")
 ----------------------------------------------------------------------------------------------------
 
 -- DM 21/3/21
@@ -71,7 +76,14 @@ local curveDisplayOrder = 1 --ensures that newer curves are drawn on top of olde
 local thickness = MIN_THICKNESS
 local color = Color3.new(0,0,0)
 
+-- Billy
+local rightMouseHeld = false
 
+local ERASER_SMALL = 8
+local ERASER_MEDIUM = 24
+local ERASER_LARGE = 96
+local eraserThickness = ERASER_SMALL
+local eraserMode = false
 
 
 -- functions which convert between absolute pixel coordinates and relative coordinates 
@@ -147,6 +159,14 @@ local function drawLine(oName, oCurveIndex, oPrevMousePos, oMousePos, oThickness
 	screenLine.BorderColor3 = oColor
 	screenLine.BorderSizePixel = 1
 	screenLine.Parent = screenGui.Frame
+	
+	--- Billy
+	--board:PutLine(oPrevMousePos, oMousePos, screenLine)
+	screenLine:SetAttribute("Start", relativeToAbsolute(oPrevMousePos, screenFrame.Board))
+	screenLine:SetAttribute("Stop", relativeToAbsolute(oMousePos, screenFrame.Board))
+	screenLine:SetAttribute("RelStart", oPrevMousePos)
+	screenLine:SetAttribute("RelStop", oMousePos)
+	
 	
 	-- draw the line on the surface gui
 	--local surfaceLineVec = (oMousePos-oPrevMousePos)*surfaceFrame.Board.AbsoluteSize
@@ -257,7 +277,78 @@ local function closeGui()
 	end
 end
 
+--------
+--Billy
+---------
 
+-- Returns true if cursor is within radius of the line between start and stop
+-- Does binary search on line segment until length is less than radius/3
+local function intersects3(cursor, radius, start, stop)
+	local function centred_intersects3(start, stop)
+	
+		local mid = (start + stop) / 2
+		if mid.Magnitude <= radius or start.Magnitude <= radius or stop.Magnitude <= radius then
+			return true
+		end
+		
+		if (start-stop).Magnitude > radius/3 then
+				if start.Magnitude <= stop.Magnitude then
+					return centred_intersects3(start, mid)
+				else
+					return centred_intersects3(mid, stop)
+			end
+		end
+	end
+	
+	return centred_intersects3(start-cursor, stop-cursor)
+	
+end
+
+local function intersects_square(cursor, radius, start, stop)
+	local function centred_intersects_square(start, stop)
+
+		local mid = (start + stop) / 2
+		if (math.abs(mid.X) <= radius and math.abs(mid.Y) <= radius) or
+			(math.abs(start.X) <= radius and math.abs(start.Y) <= radius) or 
+			(math.abs(stop.X) <= radius and math.abs(stop.Y) <= radius) then
+			return true
+		end
+
+		if (start-stop).Magnitude > radius/3 then
+			if start.Magnitude <= stop.Magnitude then
+				return centred_intersects_square(start, mid)
+			else
+				return centred_intersects_square(mid, stop)
+			end
+		end
+	end
+
+	return centred_intersects_square(start-cursor, stop-cursor)
+
+end
+
+
+local function erase(cursor, radius)
+	
+	for _, stroke in ipairs(screenLines:GetChildren()) do
+		for _, line in ipairs(stroke.Frame:GetChildren()) do
+		
+			local start = line:GetAttribute("Start")
+			local stop = line:GetAttribute("Stop")
+			
+			if intersects3(cursor, radius, start, stop) then
+				line.Parent = nil
+				local relStart = line:GetAttribute("RelStart")
+				local relStop = line:GetAttribute("RelStop")
+				whiteboardEraseEvent:FireServer(game.Players.LocalPlayer.Name, relStart, relStop)
+			end
+			
+		end
+	end	
+end
+
+
+-----------
 
 
 -----------------------------------------
@@ -271,35 +362,84 @@ screenFrame.Board.MouseMoved:Connect(function(x,y)
 	prevMousePos = mousePos
 	mousePos = absoluteToRelative(Vector2.new(x, y), screenFrame.Board)
 	
-	-- draw the cursor, and fire the event for the other players
-	drawCursor(game.Players.LocalPlayer.Name, mousePos, thickness, color)
-	whiteboardCursorEvent:FireServer(game.Players.LocalPlayer.Name, mousePos, thickness, color)
+	--Billy
+	local cursorColor = color
+	local cursorThickness = thickness
+	if eraserMode or rightMouseHeld then
+		cursorColor = Color3.new(0,0,0)
+		cursorThickness = eraserThickness
+	end
 	
-	-- if the mouse is held draw a line and fire the event for the other players
-	if mouseHeld and boardActive then
-		drawLine(game.Players.LocalPlayer.Name, curveIndex, prevMousePos, mousePos, thickness, color)
-		whiteboardDrawEvent:FireServer(game.Players.LocalPlayer.Name, curveIndex, prevMousePos, mousePos, thickness, color)
-	end 
+	-- draw the cursor, and fire the event for the other players
+	drawCursor(game.Players.LocalPlayer.Name, mousePos, cursorThickness, cursorColor)
+	whiteboardCursorEvent:FireServer(game.Players.LocalPlayer.Name, mousePos, cursorThickness, cursorColor)
+	
+	-- Billy
+	if boardActive and (mouseHeld or rightMouseHeld) then
+		if eraserMode or rightMouseHeld then
+			erase(relativeToAbsolute(mousePos, screenFrame.Board), eraserThickness/math.sqrt(math.pi))
+		else
+			-- if the mouse is held draw a line and fire the event for the other players
+			drawLine(game.Players.LocalPlayer.Name, curveIndex, prevMousePos, mousePos, thickness, color)
+			whiteboardDrawEvent:FireServer(game.Players.LocalPlayer.Name, curveIndex, prevMousePos, mousePos, thickness, color)
+		end
+	end
 	
 end)
 
 screenFrame.Board.MouseButton1Down:Connect(function(x,y) 
 	mouseHeld = true 
-	curveIndex = curveIndex+1
+	
+	--Billy
+	if not boardActive then return end
 	
 	-- set both of mousePos and prevMousePos to the current mouse position
 	mousePos = absoluteToRelative(Vector2.new(x, y), screenFrame.Board)
 	prevMousePos = mousePos
 	
-	if mouseHeld and boardActive then
+	if eraserMode then
+		erase(relativeToAbsolute(mousePos, screenFrame.Board), eraserThickness/2)
+	else
+		-- Billy: moved curveIndex increment from below "mouseHeld=true" to here for better logic - does that matter/break anything?
+		curveIndex = curveIndex+1
 		drawLine(game.Players.LocalPlayer.Name, curveIndex, prevMousePos, mousePos, thickness, color)
 		whiteboardDrawEvent:FireServer(game.Players.LocalPlayer.Name, curveIndex, prevMousePos, mousePos, thickness, color)
 	end 
 end)
 
-screenFrame.Board.MouseButton1Up:Connect(function(x,y) 
-	mouseHeld = false
+-------------
+-- Billy
+-------------
+--screenFrame.Board.MouseButton1Up:Connect(function(x,y) 
+--	mouseHeld = false
+--end)
+UserInputService.InputEnded:Connect(function(input, gp)
+
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		mouseHeld = false
+	end
+	
+	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+		eraserMode = false
+	end
+
 end)
+
+screenFrame.Board.MouseButton2Down:Connect(function(x,y)
+	rightMouseHeld = true
+
+	-- set both of mousePos and prevMousePos to the current mouse position
+	mousePos = absoluteToRelative(Vector2.new(x, y), screenFrame.Board)
+	prevMousePos = mousePos
+	
+	drawCursor(game.Players.LocalPlayer.Name, mousePos, eraserThickness, Color3.new(0,0,0))
+	erase(relativeToAbsolute(mousePos, screenFrame.Board), eraserThickness/2)
+end)
+
+screenFrame.Board.MouseButton2Up:Connect(function(x,y) 
+	rightMouseHeld = false
+end)
+
 
 --------------------------------------
 -- handle receiving whiteboard events from server
@@ -328,6 +468,24 @@ whiteboardUndoEvent.OnClientEvent:Connect(function(oName, oCurveIndex)
 	local screenLine, surfaceLine = getCurveGuis(oName .. tostring(oCurveIndex))
 	screenLine:Destroy()
 	surfaceLine:Destroy()
+end)
+
+--Billy
+whiteboardEraseEvent.OnClientEvent:Connect(function(oName, oStart, oStop)
+	if oName == game.Players.LocalPlayer.Name then return end
+	for _, stroke in ipairs(screenLines:GetChildren()) do
+		for _, line in ipairs(stroke.Frame:GetChildren()) do
+
+			local relStart = line:GetAttribute("RelStart")
+			local relStop = line:GetAttribute("RelStop")
+
+			if relStart == oStart and relStop == oStop then
+				line.Parent = nil
+				return
+			end
+
+		end
+	end
 end)
 
 
@@ -403,44 +561,73 @@ screenFrame.Buttons.ThinnerButton.Activated:Connect(function()
 	thickness = math.max(thickness/2, MIN_THICKNESS)
 end)
 
+-- Billy
+-- added eraserMode = false to every button
+
 screenFrame.Buttons.PenBlackButton.Activated:Connect(function() 
 	color = Color3.new(0,0,0)
+	eraserMode = false
 end)
 
 screenFrame.Buttons.PenWhiteButton.Activated:Connect(function() 
 	color = Color3.new(1,1,1)
+	eraserMode = false
 end)
 
 screenFrame.Buttons.PenRedButton.Activated:Connect(function() 
 	color = Color3.new(1,0,0)
+	eraserMode = false
 end)
 
 screenFrame.Buttons.PenGreenButton.Activated:Connect(function() 
 	color = Color3.new(0,150/255,0)
+	eraserMode = false
 end)
 
 screenFrame.Buttons.PenBlueButton.Activated:Connect(function() 
 	color = Color3.new(0,0,1)
+	eraserMode = false
 end)
 
 screenFrame.Buttons.PenOrangeButton.Activated:Connect(function() 
 	color = Color3.new(255/255,155/255,0)
+	eraserMode = false
 end)
 
 screenFrame.Buttons.PenBrownButton.Activated:Connect(function() 
 	color = Color3.new(150/255,70/255,30/255)
+	eraserMode = false
 end)
 
 screenFrame.Buttons.PenPurpleButton.Activated:Connect(function() 
 	color = Color3.new(130/255,0,130/255)
+	eraserMode = false
 end)
 
 screenFrame.Buttons.PenPinkButton.Activated:Connect(function() 
 	color = Color3.new(1,100/255,150/255)
+	eraserMode = false
 end)
 
 screenFrame.Buttons.PenYellowButton.Activated:Connect(function() 
 	color = Color3.new(1,220/255,0)
+	eraserMode = false
+end)
+
+-- Billy
+screenFrame.Buttons.EraserSmall.Activated:Connect(function() 
+	eraserMode = true
+	eraserThickness = ERASER_SMALL
+end)
+
+screenFrame.Buttons.EraserMedium.Activated:Connect(function() 
+	eraserMode = true
+	eraserThickness = ERASER_MEDIUM
+end)
+
+screenFrame.Buttons.EraserLarge.Activated:Connect(function() 
+	eraserMode = true
+	eraserThickness = ERASER_LARGE
 end)
 
 ------- spiel controls DM 24/4/21
